@@ -19,6 +19,7 @@
   "homepage": "https://github.com/Eustache-Discord-Framework/eustache-maestro#readme",
   "dependencies": {
     "@discordjs/opus": "^0.4.0",
+    "discord.js": "^12.5.1",
     "eustache-discord-framework": "^1.0.5",
     "googleapis": "^67.1.1",
     "module-alias": "^2.2.2",
