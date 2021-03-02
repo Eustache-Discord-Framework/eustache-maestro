@@ -62,4 +62,4 @@ class Track {
     }
 }
 
-module.exports = BaseTrack;
+module.exports = Track;
