@@ -190,9 +190,23 @@ class Player {
      * @param {*} query
      */
     async askService(query) {
-        if (query instanceof discord.MessageEmbed && query.provider.name === 'YouTube') return new EmbedTrack(await query);
-        else if (typeof query === 'string') return await YouTube.video(query);
-        return null;
+        let track, service;
+        if (query instanceof discord.MessageEmbed && query.provider.name === 'YouTube') {
+            service = 'EMBED';
+            track = new EmbedTrack(await query);
+        }
+        else if (typeof query === 'string') {
+            service = 'YOUTUBE';
+            track = await YouTube.video(query);
+        }
+        /**
+         * @event EustacheClient#fetched
+         * @param {YouTubeTrack} track The fetched track
+         * @param {string} query The youtube video query
+         * @param {string} service The service from which the track was fetched
+         */
+        this.client.emit('fetched', track, query, service);
+        return track;
     }
 
     /**
