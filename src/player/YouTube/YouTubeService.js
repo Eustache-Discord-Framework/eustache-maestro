@@ -11,13 +11,10 @@ const YouTubeDataAPI = require("./YouTubeDataAPI");
 const YouTubeTrack = require("./YouTubeTrack");
 
 class YouTubeService {
-    constructor(client) {
-        Object.defineProperty(this, 'client', { value: client })
-    }
-
     static async video(query) {
         const items = await YouTubeDataAPI.fetchVideoFromSearch(query);
-        return new YouTubeTrack(items[0]);
+        const track = new YouTubeTrack(items[0])
+        return track;
     }
 }
 
