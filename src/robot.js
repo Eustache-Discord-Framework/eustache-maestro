@@ -7,9 +7,15 @@ const { setUsername } = require('./util.js');
 const config = require('./config.json');
 
 const client = new EustacheClient({
-    prefix: config.bot.prefix,
+    commandPrefix: config.bot.prefix,
     ownerID: config.bot.owner
 });
+
+client.on('typeRegister', type => console.log(`[BOT => REGISTRY] Registered command ${type.constructor.name}:${type.name}`));
+client.on('commandRegister', command => console.log(`[BOT => REGISTRY] Registered command ${command.constructor.name}:${command.name}`));
+client.on('commandTrigger', (command, args, msg, client) => console.log(`[BOT => COMMAND] Triggered ${command.constructor.name}:${command.name}.`));
+client.on('unknownCommand', msg => console.log(`[BOT => COMMAND] Unknown command.`));
+client.on('fetched', (track, query, from) => console.log(`[PLAYER => ${from.toUpperCase()}] Fetched ${track.name} from ${query}`));
 
 client.registry
     .registerDefaults()
