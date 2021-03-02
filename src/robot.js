@@ -33,7 +33,7 @@ client.on('ready', () => {
     // This part is not in the client file cuz it requires the config
     const bot = client.user;
     console.log(`Logged in as ${bot.tag} !`);
-    if (bot.username != Config.username) setUsername(bot, Config.username);
+    if (bot.username != config.bot.username) setUsername(bot, config.bot.username);
     bot.setActivity('')
 });
 
