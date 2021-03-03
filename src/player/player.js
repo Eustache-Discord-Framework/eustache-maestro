@@ -3,9 +3,7 @@
 const { player } = require('../util');
 const Queue = require("./queue");
 const Voice = require('./voice');
-const YouTube = require('./YouTube/YouTubeService');
-const discord = require('discord.js');
-const EmbedTrack = require('./Embed/EmbedTrack');
+const ServiceDispatcher = require('./dispatcher')
 
 /** Represent the music player */
 class Player {
@@ -32,7 +30,7 @@ class Player {
      * This streamDispatcher
      * @type {discord.StreamDispatcher}
      */
-    dispatcher;
+    streamDispatcher;
 
     static instance(client) {
         if (this.$instance === null) {
@@ -54,6 +52,12 @@ class Player {
          * @type {Queue}
          */
         this.queue = new Queue();
+
+        /**
+         * This service dispatcher
+         * @type {ServiceDispatcher}
+         */
+        this.serviceDispatcher = new ServiceDispatcher(this.client, this)
     }
 
     /**
@@ -94,7 +98,7 @@ class Player {
     destroy() {
         this.connection = null;
         this.status = player.OFF;
-        this.dispatcher = null;
+        this.streamDispatcher = null;
     }
 
     /**
@@ -105,11 +109,9 @@ class Player {
      */
     async play(msg, channel, query) {
         if (!query) return
-        const track = await this.askService(query);
-        if (!track) return msg.reply(`cette ressource est introuvable.`)
+        await this.serviceDispatcher.handleQuery(msg, query)
         await this.connect(msg, channel);
-        if (this.status === player.PLAYING) this.addToQueue(msg, track)
-        else this.stream(msg, track);
+        if (this.status !== player.PLAYING) this.next(msg);
     }
 
     /**
@@ -128,11 +130,11 @@ class Player {
             return this.next(msg);
         });
         stream.on('end', () => this.next(msg));
-        this.dispatcher = await this.voice.play(this.connection, stream)
-            .then(dispatcher => {
+        this.streamDispatcher = await this.voice.play(this.connection, stream)
+            .then(streamDispatcher => {
                 this.status = player.PLAYING;
                 msg.channel.send(`\`${track.title}\``);
-                return dispatcher;
+                return streamDispatcher;
             })
             .catch(console.error);
     }
@@ -155,7 +157,7 @@ class Player {
     async pause(msg) {
         if (this.status === player.OFF) return msg.reply(`je ne joue pas de musique pour l'instant.`);
         if (this.status === player.PAUSED) return msg.reply(`le lecteur est déjà en pause.`);
-        await this.voice.pause(this.dispatcher);
+        await this.voice.pause(this.streamDispatcher);
         this.status = player.PAUSED;
         return msg.reply(`le lecteur est été mis en pause.`);
     }
@@ -168,7 +170,7 @@ class Player {
     async resume(msg) {
         if (this.status === player.OFF) return msg.reply(`je ne joue pas de musique pour l'instant.`);
         if (this.status === player.PLAYING) return msg.reply(`le lecteur est déjà en cours.`);
-        await this.voice.resume(this.dispatcher);
+        await this.voice.resume(this.streamDispatcher);
         this.status = player.PLAYING;
         return msg.reply(`le lecteur a redémarré.`);
     }
@@ -183,51 +185,34 @@ class Player {
     }
 
     /**
-     * Vers un PlayerDispatcher !?
-     */
-    /**
-     * Select the media provider service to use and if not necessary, directly returns the track
-     * @param {*} query
-     */
-    async askService(query) {
-        let track, service;
-        if (query instanceof discord.MessageEmbed && query.provider.name === 'YouTube') {
-            service = 'EMBED';
-            track = new EmbedTrack(await query);
-        }
-        else if (typeof query === 'string') {
-            service = 'YOUTUBE';
-            track = await YouTube.video(query);
-        }
-        /**
-         * @event EustacheClient#fetched
-         * @param {YouTubeTrack} track The fetched track
-         * @param {string} query The youtube video query
-         * @param {string} service The service from which the track was fetched
-         */
-        this.client.emit('fetched', track, query, service);
-        return track;
-    }
-
-    /**
      * Display the queue
      * @param {discord.Message} msg
      */
     async displayQueue(msg) {
-        return (this.queue.length > 0)
-            ?
-            msg.channel.send(`\`-\` \`${this.queue.map(track => track.title).join("\`\n\`-\` \`")}\``)
-            :
-            msg.channel.send(`la liste de lecture est vide.`);
+        if (this.queue.lengt === 0) return msg.channel.send(`la liste de lecture est vide.`);
+        let queueMsg = '';
+        for (let i = 0; i < 10; i++) {
+            queueMsg += `\`-\` \`${this.queue[i].title}\`\n`;
+        }
+        msg.channel.send(queueMsg)
     }
 
     /**
      * Push track to the queue
      * @param {discord.Message} msg
+     * @param {Track|Track[]} track
      */
     async addToQueue(msg, track) {
-        await this.queue.add(track)
-        return msg.reply(`\`${track.title}\` a été ajouté à la liste de lecture.`);
+        if (!track) return msg.reply(`Aucun média n'a été trouvé`);
+        if (Array.isArray(track)) {
+            for (const tr of track) {
+                this.queue.add(tr);
+            }
+            return msg.reply(`\`${track.length}\` média${track.length > 1 ? 's' : ''} ${track.length > 1 ? 'ont' : 'a'} été ajouté${track.length > 1 ? 's' : ''} à la liste de lecture.`);
+        } else {
+            this.queue.add(track);
+            return msg.reply(`\`${track.title}\` a été ajouté à la liste de lecture.`);
+        }
     }
 
     /**
