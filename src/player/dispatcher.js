@@ -31,22 +31,19 @@ class ServiceDispatcher {
     async handleQuery(msg, query) {
         let track, tracks;
         if (query.match(youtube.url)) {
-            const url = youtube.url.exec(query);
+            const url = youtube.url.exec(query)[0];
 
-            // Playlist
-            if (query.match(youtube.playlist)) {
+            if (query.match(youtube.playlist)) {        //  Playlist
                 tracks = await youtube.fetchPlaylistVideos(url);
-                console.log(tracks.map(tr => tr.title));
-            }
-            // Video
-            if (query.match(youtube.video)) {
+                this.player.addToQueue(msg, tracks);
+            } else if (query.match(youtube.video)) {    //  Video
                 track = await youtube.fetchVideo(url);
-                console.log(track.title)
+                this.player.addToQueue(msg, track);
             }
 
         } else {
             track = await youtube.searchVideo(query);
-            console.log(track.title)
+            this.player.addToQueue(msg, track);
         }
     }
 }
