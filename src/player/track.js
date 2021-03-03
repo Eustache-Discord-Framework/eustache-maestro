@@ -14,8 +14,6 @@ class Track {
      * @param {TrackData} data
      */
     constructor(data) {
-        this.constructor.validateData(data);
-
         /**
          * This media title
          * @type {string}
@@ -50,15 +48,6 @@ class Track {
      */
     async getStream() {
         return await ytdl(this.url) ?? null;
-    }
-
-    /**
-     * Validate the track data before loading
-     * @param {Object} data
-     */
-    static validateData(data) {
-        if (!data.title) throw Error(`Track title cannot be null`);
-        if (!data.url) throw Error(`Track url cannot be null`);
     }
 }
 
