@@ -15,7 +15,7 @@ const url = new RegExp(/(https\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/, 'i
 const video = new RegExp(/v\=\w+/, 'ig');
 
 /** YouTube url playlist identifier */
-const playlist = new RegExp(/list\=\w+/, 'ig');
+const playlist = new RegExp(/list\=[\w-]+/, 'ig');
 
 /**
  * Extracts a video id from an url

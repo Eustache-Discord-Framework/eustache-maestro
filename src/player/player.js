@@ -10,7 +10,7 @@ class Player {
     /**
      * This instance
      * @static
-     * @type {ThisType<Player>}
+     * @type {Player}
      */
     static $instance = null;
 
