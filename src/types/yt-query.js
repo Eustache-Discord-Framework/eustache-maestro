@@ -1,7 +1,13 @@
 'use strict';
 
+function escapeRegex(regex) {
+    return regex.replace(`\\`, `\\\\`);
+}
+
 const { ArgumentType } = require('eustache-discord-framework');
-const youtubeUrl = new RegExp('^https?\\:\\/\\/(www\\.)?(youtube\\.com|youtu\\.?be)\/[\\?\\=\\w]+');
+const url = new RegExp(/(https\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/, 'ig');
+const video = new RegExp(/v\=\w+/, 'ig');
+const playlist = new RegExp(/list\=\w+/, 'ig');
 
 /** Represent string type */
 class YouTubeQueryArgumentType extends ArgumentType {
@@ -10,13 +16,28 @@ class YouTubeQueryArgumentType extends ArgumentType {
     }
 
     validate(value) {
-        return (super.validate(value, youtubeUrl) || this.client.registry.types.get('string').validate('value'))
+        return this.client.registry.types.get('string').validate(value)
     }
 
     parse(msg, value) {
-        // Returns embeds to save some YouTube API points
-        if (value.match(youtubeUrl)) return msg.embeds[0]
-        else return String(value);
+        let query = new Object();
+        query.service = 'youtube';
+
+        if (value.match(url)) {
+            if (value.match(playlist)) {
+                query.type = 'playlist';
+                query.media = playlist.exec(value)[0].replace(/list\=/, '');
+            }
+            if (value.match(video)) {
+                query.type = 'video';
+                query.media = video.exec(value)[0].replace(/v\=/, '');
+            }
+        } else {
+            query.type = 'video';
+                query.media = String(value);
+        }
+
+        return query;
     }
 }
 
