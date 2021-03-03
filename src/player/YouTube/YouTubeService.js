@@ -45,11 +45,11 @@ const makeChannelUrl = id => `https://youtube.com/channel/${id}`;
  */
 function trackFromVideo(data) {
     return new Track({
-        title: data.title,
-        url: makeChannelUrl(data.videoId),
+        title: data.snippet.title,
+        url: makeVideoUrl(data.id),
         author: {
-            name: data.name,
-            url: makeChannelUrl(data.channelId)
+            name: data.snippet.channelTitle,
+            url: makeChannelUrl(data.snippet.channelId)
         }
     });
 }
@@ -62,7 +62,7 @@ function trackFromVideo(data) {
 function trackFromPlaylistItem(data) {
     return new Track({
         title: data.snippet.title,
-        url: makeChannelUrl(data.id),
+        url: makeVideoUrl(data.snippet.resourceId.videoId),
         author: {
             name: data.snippet.videoOwnerChannelTitle,
             url: makeChannelUrl(data.snippet.videoOwnerChannelId),
@@ -72,6 +72,8 @@ function trackFromPlaylistItem(data) {
 
 module.exports = {
     url,
+    video,
+    playlist,
     extractVideoId,
     extractPlaylistId,
     makeVideoUrl,
@@ -83,8 +85,8 @@ module.exports = {
     * @returns {Track}
     */
     searchVideo: async query => {
-        const item = await api.getVideoBySearch(query);
-        return trackFromVideo(item);
+        const items = await api.getVideoBySearch(query);
+        return trackFromVideo(items[0]);
     },
 
     /**
@@ -94,8 +96,8 @@ module.exports = {
      */
     fetchVideo: async url => {
         const id = extractVideoId(url);
-        const item = await api.queryVideoByVideoId(id);
-        return trackFromVideo(item);
+        const items = await api.queryVideoByVideoId(id);
+        return trackFromVideo(items[0]);
     },
 
     /**
