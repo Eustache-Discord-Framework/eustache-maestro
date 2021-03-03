@@ -12,8 +12,8 @@ class PlayCommand extends Command {
             args: [
                 {
                     key: 'query',
-                    label: 'URL YouTube | Mots clés',
-                    type: 'yt-query',
+                    label: 'URL | Recherche',
+                    type: 'string',
                     infinite: true
                 }
             ]
