@@ -7,7 +7,7 @@ class PlayCommand extends Command {
     constructor(client) {
         super(client, {
             name: 'play',
-            alias: ['connect', 'join', 'add'],
+            alias: ['connect', 'join', 'add', 'youtube', 'yt'],
             description: "ajoute une piste à la liste de lecture.",
             args: [
                 {
