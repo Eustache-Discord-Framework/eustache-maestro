@@ -105,3 +105,6 @@ dist
 
 # Secrets
 src/config.json
+
+# Tests
+tests/
