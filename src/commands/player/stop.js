@@ -1,21 +1,29 @@
 'use strict';
 
-const Player = require("@player/player");
-const { Command } = require('eustache-discord-framework');
+const Player = require('@player/player');
+const {Command} = require('eustache-discord-framework');
 
+/** Stops the player */
 class StopCommand extends Command {
-    constructor(client) {
-        super(client, {
-            name: 'stop',
-            alias: ['disconnect', 'leave'],
-            description: "vide la liste de lecture et arrête le lecteur."
-        })
-    }
+  /**
+   * @param {EustacheClient} client
+   */
+  constructor(client) {
+    super(client, {
+      name: 'stop',
+      alias: ['disconnect', 'leave'],
+      description: 'vide la liste de lecture et arrête le lecteur.',
+    });
+  }
 
-    run(msg) {
-        const player = Player.instance(this.client);
-        return player.stop(msg);
-    }
+  /**
+   * Runs the command
+   * @param {discord.Message} msg
+   */
+  run(msg) {
+    const player = Player.instance(this.client);
+    player.stop(msg);
+  }
 }
 
 module.exports = StopCommand;

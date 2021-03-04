@@ -11,33 +11,36 @@ const discord = require('discord.js');
  * @param {string} username The new value
 */
 function setUsername(user, username) {
-    if (typeof username != 'string') throw Error(`Username must be a string.`);
-    user.setUsername(username)
-        .then(user => console.log(`Updated username to ${user.username}.`))
-        .catch(console.error);
+  if (typeof username != 'string') throw Error('Username must be a string.');
+  user.setUsername(username)
+      .then((user) => console.log(`Updated username to ${user.username}.`))
+      .catch(console.error);
 }
 
 const player = {
-    OFF: 0,
-    PLAYING: 1,
-    PAUSED: 10
-}
+  OFF: 0,
+  PLAYING: 1,
+  PAUSED: 10,
+};
 
-/** Templated embed */
+/**
+ * Returns an embed with Eustache's template
+ * @return {discord.MessageEmbed}
+ */
 const embed = () => new discord.MessageEmbed({
-    color: 'FFBD4A',
-    files: [
-        new discord.MessageAttachment('./src/avatar.png', 'avatar.png')
-    ],
-    footer: {
-        text: config.bot.username,
-        iconURL: 'attachment://avatar.png'
-    },
-    timestamp: Date.now()
+  color: 'FFBD4A',
+  files: [
+    new discord.MessageAttachment('./src/avatar.png', 'avatar.png'),
+  ],
+  footer: {
+    text: config.bot.username,
+    iconURL: 'attachment://avatar.png',
+  },
+  timestamp: Date.now(),
 });
 
 module.exports = {
-    setUsername,
-    player,
-    embed
-}
+  setUsername,
+  player,
+  embed,
+};
