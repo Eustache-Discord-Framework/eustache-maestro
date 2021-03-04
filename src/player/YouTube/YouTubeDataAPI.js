@@ -1,7 +1,7 @@
 'use strict'
 
 const { google } = require('googleapis');
-const config = require('@root/config.json');
+const config = require('@config/bot-config.json');
 
 const youtube = google.youtube({
     version: 'v3',

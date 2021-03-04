@@ -27,6 +27,7 @@
     "ytdl-core-discord": "^1.2.5"
   },
   "_moduleAliases": {
+    "@config": "../",
     "@root": "src/",
     "@commands": "src/commands",
     "@types": "src/types",
