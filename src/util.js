@@ -23,6 +23,7 @@ const player = {
     PAUSED: 10
 }
 
+/** Templated embed */
 const embed = () => new discord.MessageEmbed({
     color: 'FFBD4A',
     files: [

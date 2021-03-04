@@ -1,6 +1,6 @@
 'use strict';
 
-const { player } = require('../util');
+const { player, embed } = require('../util');
 const Queue = require("./queue");
 const Voice = require('./voice');
 const ServiceDispatcher = require('./dispatcher')
@@ -32,6 +32,18 @@ class Player {
      */
     streamDispatcher;
 
+    /**
+     * The played track
+     * @type {Track}
+     */
+    currentTrack;
+
+    /**
+     * This player user interface message
+     * @type {discord.Message}
+     */
+    ui;
+
     static instance(client) {
         if (this.$instance === null) {
             this.$instance = new this(client)
@@ -51,7 +63,7 @@ class Player {
          * This player queue
          * @type {Queue}
          */
-        this.queue = new Queue(this.client, this);
+        this.queue = new Queue();
 
         /**
          * This service dispatcher
@@ -118,11 +130,11 @@ class Player {
     /**
      * Stream a media
      * @param {discord.Message} msg
-     * @param {?YouTubeTrack} track
+     * @param {Track} track
      */
     async stream(msg, track) {
-        const stream = await track.getStream();
-        if (!stream) return this.streamError(msg)
+        const stream = await track.stream;
+        if (!stream) return this.streamError(msg);
         stream.on('error', () => this.streamError(msg));
         stream.on('end', () => this.next(msg));
 
@@ -144,7 +156,10 @@ class Player {
      * @param {discord.Message} msg
      */
     async next(msg) {
-        if (this.queue.queue.length > 0) return this.stream(msg, this.queue.next());
+        if (this.queue.length > 0) {
+            this.currentTrack = this.queue.next();
+            return this.stream(msg, this.currentTrack);
+        };
         msg.channel.send(`la liste de lecture est vide.`);
         return this.disconnect(msg);
     }
@@ -188,8 +203,32 @@ class Player {
      * Display the queue
      * @param {discord.Message} msg
      */
-    async displayQueue(msg) {
-        this.queue.display(msg)
+    async displayQueue(msg, maxTracks = 12) {
+        // Delete the old message
+        if (this.ui && this.ui.deletable) this.message.delete();
+
+        let queueEmbed;
+        if (this.queue.length === 0 && !this.currentTrack) {
+            queueEmbed = embed()
+                .setTitle('Player - Liste de lecture')
+                .setDescription('La liste de lecture est vide.');
+        } else {
+            queueEmbed = embed()
+                .setTitle('Player - Liste de lecture')
+                .addField('En ce moment', `\`${this.currentTrack.title}\``)
+
+            if (this.queue.length > 0) {
+                let queue = '';
+                const count = (this.queue.length > maxTracks) ? maxTracks : this.queue.length;
+                for (let i = 0; i < count; i++) {
+                    queue += `\`${i + 1}.\` \`${this.queue[i].title}\`\n`;
+                }
+                queueEmbed.addField(`${count > 1 ? 'Les' : 'Le'} ${count > 1 ? count : ''} titre${count > 1 ? 's' : ''} à venir`, queue);
+            }
+        }
+
+        // Send the new message
+        this.ui = await msg.channel.send(queueEmbed).catch(console.error);
     }
 
     /**

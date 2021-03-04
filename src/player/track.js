@@ -44,10 +44,10 @@ class Track {
 
     /**
      * Get a readable stream from ressource url
-     * @returns {StreamReadable}
+     * @type {StreamReadable}
      */
-    async getStream() {
-        return await ytdl(this.url) ?? null;
+    get stream() {
+        return ytdl(this.url) ?? null;
     }
 }
 
