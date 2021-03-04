@@ -28,9 +28,9 @@
   },
   "_moduleAliases": {
     "@config": "../",
-    "@root": "src/",
-    "@commands": "src/commands",
-    "@types": "src/types",
-    "@player": "src/player/"
+    "@root": "./src/",
+    "@commands": "./src/commands",
+    "@types": "./src/types",
+    "@player": "./src/player/"
   }
 }

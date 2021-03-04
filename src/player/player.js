@@ -51,7 +51,7 @@ class Player {
          * This player queue
          * @type {Queue}
          */
-        this.queue = new Queue();
+        this.queue = new Queue(this.client, this);
 
         /**
          * This service dispatcher
@@ -68,13 +68,13 @@ class Player {
      */
     async connect(msg, channel) {
         if (this.connection) return;
-        const reply = await msg.reply(`connection en cours...`);
+        const reply = await msg.channel.send(`Connection en cours...`);
         this.connection = await this.voice.join(channel)
             .then(connection => {
-                reply.edit(`${msg.author}, connecté au salon \`#${connection.channel.name}\`.`);
+                reply.edit(`Connecté au salon \`#${connection.channel.name}\`.`);
                 return connection;
             })
-            .catch(() => reply.edit(`${msg.author}, connectez-vous à un salon vocal d'abord.`));
+            .catch(() => reply.edit(`Connectez-vous à un salon vocal d'abord.`));
         if (this.connection) this.connection.on('disconnect', () => this.destroy())
     }
 
@@ -85,9 +85,9 @@ class Player {
      */
     async disconnect(msg) {
         if (!this.connection) return;
-        const reply = await msg.channel.send(`déconnection...`);
+        const reply = await msg.channel.send(`Déconnection...`);
         this.voice.leave(this.connection.channel)
-            .then(() => reply.edit(`déconnecté.`))
+            .then(() => reply.edit(`Déconnecté.`))
             .catch(console.error);
     }
 
@@ -112,6 +112,7 @@ class Player {
         await this.serviceDispatcher.handleQuery(msg, query)
         await this.connect(msg, channel);
         if (this.status !== player.PLAYING) this.next(msg);
+        this.displayQueue(msg);
     }
 
     /**
@@ -121,22 +122,21 @@ class Player {
      */
     async stream(msg, track) {
         const stream = await track.getStream();
-        if (!stream) {
-            msg.channel.send(`Une erreur est survenue lors de la lecture de la piste.`);
-            return this.next(msg)
-        }
-        stream.on('error', () => {
-            msg.channel.send(`Une erreur est survenue lors de la lecture de la piste.`)
-            return this.next(msg);
-        });
+        if (!stream) return this.streamError(msg)
+        stream.on('error', () => this.streamError(msg));
         stream.on('end', () => this.next(msg));
+
         this.streamDispatcher = await this.voice.play(this.connection, stream)
             .then(streamDispatcher => {
                 this.status = player.PLAYING;
-                msg.channel.send(`\`${track.title}\``);
                 return streamDispatcher;
             })
             .catch(console.error);
+    }
+
+    streamError(msg) {
+        msg.channel.send(`Une erreur est survenue lors de la lecture de la piste.`);
+        this.next(msg);
     }
 
     /**
@@ -144,7 +144,7 @@ class Player {
      * @param {discord.Message} msg
      */
     async next(msg) {
-        if (this.queue.length > 0) return this.stream(msg, this.queue.next());
+        if (this.queue.queue.length > 0) return this.stream(msg, this.queue.next());
         msg.channel.send(`la liste de lecture est vide.`);
         return this.disconnect(msg);
     }
@@ -189,12 +189,7 @@ class Player {
      * @param {discord.Message} msg
      */
     async displayQueue(msg) {
-        if (this.queue.lengt === 0) return msg.channel.send(`la liste de lecture est vide.`);
-        let queueMsg = '';
-        for (let i = 0; i < 10; i++) {
-            queueMsg += `\`-\` \`${this.queue[i].title}\`\n`;
-        }
-        msg.channel.send(queueMsg)
+        this.queue.display(msg)
     }
 
     /**

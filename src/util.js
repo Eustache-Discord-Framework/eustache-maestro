@@ -1,5 +1,10 @@
 'use strict';
 
+require('module-alias/register');
+
+const config = require('@config/bot-config.json');
+const discord = require('discord.js');
+
 /**
  * Set the username of a user
  * @param {ClientUser} user The user you want to update the username
@@ -18,7 +23,20 @@ const player = {
     PAUSED: 10
 }
 
+const embed = () => new discord.MessageEmbed({
+    color: 'FFBD4A',
+    files: [
+        new discord.MessageAttachment('./src/avatar.png', 'avatar.png')
+    ],
+    footer: {
+        text: config.bot.username,
+        iconURL: 'attachment://avatar.png'
+    },
+    timestamp: Date.now()
+});
+
 module.exports = {
     setUsername,
-    player
+    player,
+    embed
 }
