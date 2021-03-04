@@ -14,7 +14,7 @@ class Queue extends Array {
 
     /** Shuffle this queue - Fisher–Yates shuffle algorithm */
     shuffle() {
-        for (let i = this.queue.length - 1; i > 0; i--) {
+        for (let i = this.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [this[i], this[j]] = [this[j], this[i]];
         }
