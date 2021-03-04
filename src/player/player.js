@@ -124,7 +124,6 @@ class Player {
         await this.serviceDispatcher.handleQuery(msg, query)
         await this.connect(msg, channel);
         if (this.status !== player.PLAYING) this.next(msg);
-        this.displayQueue(msg);
     }
 
     /**
@@ -158,6 +157,7 @@ class Player {
     async next(msg) {
         if (this.queue.length > 0) {
             this.currentTrack = this.queue.next();
+            this.displayQueue(msg);
             return this.stream(msg, this.currentTrack);
         };
         msg.channel.send(`la liste de lecture est vide.`);
@@ -205,7 +205,7 @@ class Player {
      */
     async displayQueue(msg, maxTracks = 12) {
         // Delete the old message
-        if (this.ui && this.ui.deletable) this.message.delete();
+        if (this.ui && this.ui.deletable) this.ui.delete();
 
         let queueEmbed;
         if (this.queue.length === 0 && !this.currentTrack) {
@@ -218,12 +218,9 @@ class Player {
                 .addField('En ce moment', `\`${this.currentTrack.title}\``)
 
             if (this.queue.length > 0) {
-                let queue = '';
                 const count = (this.queue.length > maxTracks) ? maxTracks : this.queue.length;
-                for (let i = 0; i < count; i++) {
-                    queue += `\`${i + 1}.\` \`${this.queue[i].title}\`\n`;
-                }
-                queueEmbed.addField(`${count > 1 ? 'Les' : 'Le'} ${count > 1 ? count : ''} titre${count > 1 ? 's' : ''} à venir`, queue);
+                const queue = this.queue.get(count).map(track => `\`- ${track.title}\``);
+                queueEmbed.addField(`${count > 1 ? 'Les' : 'Le'} ${count > 1 ? count : ''} titre${count > 1 ? 's' : ''} à venir`, queue.join('\n'));
             }
         }
 

@@ -26,6 +26,14 @@ class Queue extends Array {
         this.currentTrack = null;
         return this.splice(0, this.length);
     }
+
+    /**
+     * Returns x tracks from the queue
+     * @param {Number} x The number of tracks
+     */
+    get(x) {
+        return this.slice(0, x)
+    }
 }
 
 module.exports = Queue;
