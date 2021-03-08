@@ -46,10 +46,10 @@ class Track {
 
   /**
   * Get a readable stream from ressource url
-  * @type {StreamReadable}
+  * @type {stream.Readable}
   */
   get stream() {
-    return ytdl(this.url) ?? null;
+    return ytdl(this.url).catch(console.error) ?? null;
   }
 }
 

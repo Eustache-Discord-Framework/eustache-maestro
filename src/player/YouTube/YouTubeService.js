@@ -22,13 +22,13 @@ const url = () => {
  * YouTube url video identifier
  * @type {RegExp}
  */
-const video = new RegExp(/v=\w+/, 'ig');
+const video = new RegExp(/v=[\w\d_-]+/, 'ig');
 
 /**
  * YouTube url playlist identifier
  * @type {RegExp}
  */
-const playlist = new RegExp(/list=[\w-]+/, 'ig');
+const playlist = new RegExp(/list=[\w\d_-]+/, 'ig');
 
 /**
  * Extracts a video id from an url
@@ -62,38 +62,6 @@ const makeVideoUrl = (id) => `https://youtube.com/watch?v=${id}`;
  */
 const makeChannelUrl = (id) => `https://youtube.com/channel/${id}`;
 
-/**
- * Build a track from video data
- * @param {Object} data
- * @return {Track}
- */
-function trackFromVideo(data) {
-  return new Track({
-    title: data.snippet.title,
-    url: makeVideoUrl(data.id),
-    author: {
-      name: data.snippet.channelTitle,
-      url: makeChannelUrl(data.snippet.channelId),
-    },
-  });
-}
-
-/**
- * Build a track from playlist item data
- * @param {Object} data
- * @return {Track}
- */
-function trackFromPlaylistItem(data) {
-  return new Track({
-    title: data.snippet.title,
-    url: makeVideoUrl(data.snippet.resourceId.videoId),
-    author: {
-      name: data.snippet.videoOwnerChannelTitle,
-      url: makeChannelUrl(data.snippet.videoOwnerChannelId),
-    },
-  });
-}
-
 module.exports = {
   url,
   video,
@@ -109,8 +77,15 @@ module.exports = {
    * @return {Track}
    */
   searchVideo: async (query) => {
-    const items = await api.getVideoBySearch(query);
-    return trackFromVideo(items[0]);
+    const items = await api.queryVideoByString(query);
+    return new Track({
+      title: items[0].snippet.title,
+      url: makeVideoUrl(items[0].id.videoId),
+      author: {
+        name: items[0].snippet.channelTitle,
+        url: makeChannelUrl(items[0].snippet.channelId)
+      },
+    });
   },
 
   /**
@@ -121,7 +96,15 @@ module.exports = {
   fetchVideo: async (url) => {
     const id = extractVideoId(url);
     const items = await api.queryVideoByVideoId(id);
-    return trackFromVideo(items[0]);
+    // Returns a new Track
+    return new Track({
+      title: items[0].snippet.title,
+      url: makeVideoUrl(items[0].id),
+      author: {
+        name: items[0].snippet.channelTitle,
+        url: makeChannelUrl(items[0].snippet.channelId)
+      },
+    });
   },
 
   /**
@@ -132,6 +115,16 @@ module.exports = {
   fetchPlaylistVideos: async (url) => {
     const id = extractPlaylistId(url);
     const items = await api.queryPlaylistItemsByPlaylistId(id);
-    return items.map((item) => trackFromPlaylistItem(item));
+    // Making all items a new Track
+    return items.map((item) => {
+      new Track({
+        title: item.snippet.title,
+        url: makeVideoUrl(item.snippet.resourceId.videoId),
+        author: {
+          name: item.snippet.videoOwnerChannelTitle,
+          url: makeChannelUrl(item.snippet.videoOwnerChannelId)
+        },
+      });
+    });
   },
 };
