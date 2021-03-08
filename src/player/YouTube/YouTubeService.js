@@ -117,7 +117,7 @@ module.exports = {
     const items = await api.queryPlaylistItemsByPlaylistId(id);
     // Making all items a new Track
     return items.map((item) => {
-      new Track({
+      return new Track({
         title: item.snippet.title,
         url: makeVideoUrl(item.snippet.resourceId.videoId),
         author: {
