@@ -1,6 +1,6 @@
 'use strict';
 
-const { player, embed } = require('../util');
+const { player, baseEmbed } = require('../util');
 const Queue = require("./queue");
 const Voice = require('./voice');
 const ServiceDispatcher = require('./dispatcher');
@@ -33,12 +33,6 @@ class Player {
   streamDispatcher;
 
   /**
-   * The played track
-   * @type {Track}
-   */
-  currentTrack;
-
-  /**
    * This player user interface message
    * @type {discord.Message}
    */
@@ -69,7 +63,7 @@ class Player {
      * This service dispatcher
      * @type {ServiceDispatcher}
      */
-    this.serviceDispatcher = new ServiceDispatcher(this.client, this)
+    this.serviceDispatcher = new ServiceDispatcher()
   }
 
   /**
@@ -81,13 +75,15 @@ class Player {
   async connect(msg, channel) {
     if (this.connection) return;
     const reply = await msg.channel.send(`Connection en cours...`);
-    this.connection = await this.voice.join(channel)
+    await this.voice.join(channel)
       .then(connection => {
+        this.connection = connection;
+        this.connection.on('disconnect', () => this.destroy());
         reply.edit(`Connecté au salon \`#${connection.channel.name}\`.`);
-        return connection;
       })
-      .catch(() => reply.edit(`Connectez-vous à un salon vocal d'abord.`));
-    if (this.connection) this.connection.on('disconnect', () => this.destroy())
+      .catch(err => {
+        reply.edit(`Connectez-vous à un salon vocal d'abord.`);
+      });
   }
 
   /**
@@ -119,11 +115,24 @@ class Player {
    * @param {discord.VoiceChannel} channel
    * @param {string} query
    */
-  async play(msg, channel, query) {
+  play(msg, channel, query) {
     if (!query) return
-    await this.serviceDispatcher.handleQuery(msg, query)
-    await this.connect(msg, channel);
-    if (this.status !== player.PLAYING) this.next(msg);
+    this.serviceDispatcher.handleQuery(query)
+      .then(async tracks => {
+        this.addToQueue(msg, tracks);
+        await this.connect(msg, channel);
+        if (
+          this.status !== player.PLAYING
+          ||
+          this.status === player.OFF
+        ) {
+          this.next(msg)
+        };
+      })
+      .catch(err => {
+        console.error(err);
+        msg.reply('média introuvable.')
+      });
   }
 
   /**
@@ -156,12 +165,12 @@ class Player {
    */
   async next(msg) {
     if (this.queue.length > 0) {
-      this.currentTrack = this.queue.next();
+      this.queue.next();
       this.displayQueue(msg);
-      return this.stream(msg, this.currentTrack);
+      return this.stream(msg, this.queue.current);
     };
     msg.channel.send(`la liste de lecture est vide.`);
-    return this.disconnect(msg);
+    this.disconnect(msg);
   }
 
   /**
@@ -174,7 +183,7 @@ class Player {
     if (this.status === player.PAUSED) return msg.reply(`le lecteur est déjà en pause.`);
     await this.voice.pause(this.streamDispatcher);
     this.status = player.PAUSED;
-    return msg.reply(`le lecteur est été mis en pause.`);
+    msg.reply(`le lecteur est été mis en pause.`);
   }
 
   /**
@@ -187,16 +196,18 @@ class Player {
     if (this.status === player.PLAYING) return msg.reply(`le lecteur est déjà en cours.`);
     await this.voice.resume(this.streamDispatcher);
     this.status = player.PLAYING;
-    return msg.reply(`le lecteur a redémarré.`);
+    msg.reply(`le lecteur a redémarré.`);
   }
 
   /**
    * Stop the player
    * @param {discord.Message} msg
    */
-  async stop(msg) {
+  stop(msg) {
     this.emptyQueue(msg);
-    if (this.status === player.PLAYING || this.status === player.PAUSED) this.disconnect(msg);
+    if (this.status === player.PLAYING || this.status === player.PAUSED) {
+      this.disconnect(msg);
+    }
   }
 
   /**
@@ -207,25 +218,25 @@ class Player {
     // Delete the old message
     if (this.ui && this.ui.deletable) this.ui.delete();
 
-    let queueEmbed;
-    if (this.queue.length === 0 && !this.currentTrack) {
-      queueEmbed = embed()
+    let embed;
+    if (this.queue.length === 0 && !this.queue.current) {
+      embed = baseEmbed()
         .setTitle('Player - Liste de lecture')
         .setDescription('La liste de lecture est vide.');
     } else {
-      queueEmbed = embed()
+      embed = baseEmbed()
         .setTitle('Player - Liste de lecture')
-        .addField('En ce moment', `\`${this.currentTrack.title}\``)
+        .addField('En ce moment', `\`${this.queue.current.title}\``);
 
       if (this.queue.length > 0) {
         const count = (this.queue.length > maxTracks) ? maxTracks : this.queue.length;
         const queue = this.queue.get(count).map(track => `\`- ${track.title}\``);
-        queueEmbed.addField(`${count > 1 ? 'Les' : 'Le'} ${count > 1 ? count : ''} titre${count > 1 ? 's' : ''} à venir`, queue.join('\n'));
+        embed.addField(`${count > 1 ? 'Les ' : 'Le'}${count > 1 ? count : ''} titre${count > 1 ? 's' : ''} à venir`, queue.join('\n'));
       }
     }
 
     // Send the new message
-    this.ui = await msg.channel.send(queueEmbed).catch(console.error);
+    this.ui = await msg.channel.send(embed).catch(console.error);
   }
 
   /**
@@ -235,14 +246,11 @@ class Player {
    */
   async addToQueue(msg, track) {
     if (!track) return msg.reply(`Aucun média n'a été trouvé`);
-    if (Array.isArray(track)) {
-      for (const tr of track) {
-        this.queue.add(tr);
-      }
-      return msg.reply(`\`${track.length}\` média${track.length > 1 ? 's' : ''} ${track.length > 1 ? 'ont' : 'a'} été ajouté${track.length > 1 ? 's' : ''} à la liste de lecture.`);
+    this.queue.add(track);
+    if (Array.isArray(track) && track.length > 1) {
+      msg.reply(`${track.length} médias ajoutés à la liste de lecture.`);
     } else {
-      this.queue.add(track);
-      return msg.reply(`\`${track.title}\` a été ajouté à la liste de lecture.`);
+      msg.reply(`média ajouté à la liste de lecture.`);
     }
   }
 
@@ -250,18 +258,18 @@ class Player {
    * Empty the queue
    * @param {discord.Message} msg
    */
-  async emptyQueue(msg) {
-    await this.queue.empty();
-    return msg.reply(`la liste de lecture a été supprimée.`)
+  emptyQueue(msg) {
+    this.queue.empty();
+    msg.reply(`la liste de lecture a été supprimée.`);
   }
 
   /**
    * Shuffle the queue
    * @param {discord.Message} msg
    */
-  async shuffleQueue(msg) {
-    await this.queue.shuffle()
-    return msg.reply(`la liste de lecture a été mélangée.`)
+  shuffleQueue(msg) {
+    this.queue.shuffle()
+    msg.reply(`la liste de lecture a été mélangée.`);
   }
 }
 

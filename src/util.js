@@ -27,7 +27,7 @@ const player = {
  * Returns an embed with Eustache's template
  * @return {discord.MessageEmbed}
  */
-const embed = () => new discord.MessageEmbed({
+const baseEmbed = () => new discord.MessageEmbed({
   color: 'FFBD4A',
   files: [
     new discord.MessageAttachment('./src/avatar.png', 'avatar.png'),
@@ -42,5 +42,5 @@ const embed = () => new discord.MessageEmbed({
 module.exports = {
   setUsername,
   player,
-  embed,
+  baseEmbed,
 };

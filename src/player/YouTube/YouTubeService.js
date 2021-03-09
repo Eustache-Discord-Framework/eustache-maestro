@@ -3,128 +3,99 @@
 const api = require('./YouTubeDataAPI');
 const Track = require('../track');
 
-/**
- * YouTube API interactions are limited by a 10 000 units quota
- * Action cost depends on the action type, each method calling
- * the api is exported with his own cost in the jsdoc
- */
+const regex = {
+  url: RegExp(/(https:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/, 'ig'),
+  video: new RegExp(/v=[\w\d_-]+/, 'ig'),
+  playlist: new RegExp(/list=[\w\d_-]+/, 'ig')
+}
+
+const makeVideoUrl = id => `https://youtu.be/${id}`;
 
 /**
- * YouTube url regex
- * @return {RegExp}
+ * Search for a video in YouTube - 100 api quota units
+ * @param {string} query The search string
+ * @returns {Promise<Track, Error>}
  */
-const url = () => {
-  const regex = /(https:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+/gi;
-  return new RegExp(regex);
-};
+function search(str) {
+  return new Promise((resolve, reject) => {
+    api.searchVideo(str)
+      .then(items => {
+        resolve(new Track(
+          items[0].snippet.title,
+          makeVideoUrl(items[0].id.videoId)
+        ));
+      })
+      .catch(reject);
+  });
+}
 
 /**
- * YouTube url video identifier
- * @type {RegExp}
+ * Fetch a youtube video or playlist videos - 1 api quota unit
+ * @param {String} query The query string (containing an url)
+ * @returns {Promise<Track|Track[], Error} The returned Tracks
  */
-const video = new RegExp(/v=[\w\d_-]+/, 'ig');
+function query(query) {
+  return new Promise((resolve, reject) => {
+    if (!query.match(regex.url)) {
+      throw new Error('Query must contain a YouTube url.');
+    }
+    const url = regex.url.exec(query)[0];
+    let _query;
+    if (url.match(regex.playlist)) {
+      _query = playlistVideos
+    } else if (url.match(regex.video)) {
+      _query = video
+    }
+    _query(url)
+      .then(resolve)
+      .catch(reject);
+  });
+}
 
 /**
- * YouTube url playlist identifier
- * @type {RegExp}
+ * Fetch items from a playlist - 1 api quota unit
+ * @param {string} url The query url
+ * @returns {Promise<Track, Error>}
  */
-const playlist = new RegExp(/list=[\w\d_-]+/, 'ig');
+function video(url) {
+  return new Promise((resolve, reject) => {
+    const param = regex.video.exec(url)[0]
+    const id = param.replace(/v=/, '');
+    api.queryVideo(id)
+      .then(items => {
+        resolve(new Track(
+          items[0].snippet.title,
+          makeVideoUrl(items[0].id)
+        ));
+      })
+      .catch(reject);
+  });
+}
 
 /**
- * Extracts a video id from an url
- * @param {String} url The url to parse
- * @return {String} The video id
+ * Fetch items from a playlist - 1 api quota unit
+ * @param {string} url The query url
+ * @returns {Promise<Track[], Error>}
  */
-const extractVideoId = (url) => {
-  return video.exec(url)[0].replace(/v=/, '');
-};
-
-/**
- * Extracts a playlist id from an url
- * @param {String} url The url to parse
- * @return {String} The playlist id
- */
-const extractPlaylistId = (url) => {
-  return playlist.exec(url)[0].replace(/list=/, '');
-};
-
-/**
- * Makes a video url from a video id
- * @param {String} id The video id
- * @return {String} The full video url
- */
-const makeVideoUrl = (id) => `https://youtube.com/watch?v=${id}`;
-
-/**
- * Makes a channel url from a channel id
- * @param {String} id The channel id
- * @return {String} The full channel url
- */
-const makeChannelUrl = (id) => `https://youtube.com/channel/${id}`;
+function playlistVideos(url) {
+  return new Promise((resolve, reject) => {
+    const param = regex.playlist.exec(url)[0];
+    const id = param.replace(/list=/, '');
+    api.queryPlaylistVideos(id)
+      .then(items => {
+        resolve(items.map((item) => {
+          return new Track(
+            item.snippet.title,
+            makeVideoUrl(item.snippet.resourceId.videoId)
+          );
+        }));
+      })
+      .catch(reject);
+  });
+}
 
 module.exports = {
-  url,
-  video,
-  playlist,
-  extractVideoId,
-  extractPlaylistId,
-  makeVideoUrl,
-  makeChannelUrl,
-
-  /**
-   * Fetch items from a playlist - 100 api units
-   * @param {string} query The query string
-   * @return {Track}
-   */
-  searchVideo: async (query) => {
-    const items = await api.queryVideoByString(query);
-    return new Track({
-      title: items[0].snippet.title,
-      url: makeVideoUrl(items[0].id.videoId),
-      author: {
-        name: items[0].snippet.channelTitle,
-        url: makeChannelUrl(items[0].snippet.channelId)
-      },
-    });
-  },
-
-  /**
-   * Fetch items from a playlist - 1 api unit
-   * @param {string} url The query url
-   * @return {Track}
-   */
-  fetchVideo: async (url) => {
-    const id = extractVideoId(url);
-    const items = await api.queryVideoByVideoId(id);
-    // Returns a new Track
-    return new Track({
-      title: items[0].snippet.title,
-      url: makeVideoUrl(items[0].id),
-      author: {
-        name: items[0].snippet.channelTitle,
-        url: makeChannelUrl(items[0].snippet.channelId)
-      },
-    });
-  },
-
-  /**
-   * Fetch items from a playlist - 1 api unit
-   * @param {string} url The query url
-   * @return {Track[]}
-   */
-  fetchPlaylistVideos: async (url) => {
-    const id = extractPlaylistId(url);
-    const items = await api.queryPlaylistItemsByPlaylistId(id);
-    // Making all items a new Track
-    return items.map((item) => {
-      return new Track({
-        title: item.snippet.title,
-        url: makeVideoUrl(item.snippet.resourceId.videoId),
-        author: {
-          name: item.snippet.videoOwnerChannelTitle,
-          url: makeChannelUrl(item.snippet.videoOwnerChannelId)
-        },
-      });
-    });
-  },
+  regex,
+  search,
+  query
 };

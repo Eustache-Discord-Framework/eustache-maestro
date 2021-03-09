@@ -14,7 +14,7 @@ class Voice {
   join(channel) {
     return new Promise((resolve, reject) => {
       if (!channel || channel.type !== 'voice') {
-        reject(new Error('Could not connect to the specified channel.'));
+        reject(new Error('Could not connect to voice.'));
       } else {
         resolve(channel.join());
       }

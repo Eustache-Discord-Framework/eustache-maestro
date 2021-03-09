@@ -3,11 +3,17 @@
 /** Represent the music queue */
 class Queue extends Array {
   /**
-   * Adds a track to the queue
+   * Adds one or more track to the queue
    * @param {Track} track Track to push to queue
    */
   add(track) {
-    this.push(track);
+    if (Array.isArray(track)) {
+      track.forEach(tr => {
+        this.push(tr);
+      });
+    } else {
+      this.push(track)
+    }
   }
 
   /**
@@ -15,11 +21,12 @@ class Queue extends Array {
    * @return {Track}
    */
   next() {
-    return this.shift();
+    this.current = this.shift();
+    return this.current;
   }
 
   /**
-   * Shuffles this queue
+   * Shuffles this queue ;
    * Using Fisher–Yates shuffle algorithm
    */
   shuffle() {
@@ -31,7 +38,7 @@ class Queue extends Array {
 
   /** Empties the queue */
   empty() {
-    this.currentTrack = null;
+    this.current = null;
     this.splice(0, this.length);
   }
 
